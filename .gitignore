@@ -1,7 +1,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-AIview/site-detail.config
+ghostdriver-2.1.0
+credential.json
 
 # C extensions
 *.so
