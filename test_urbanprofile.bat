@@ -1,0 +1,1 @@
+python -m unittest sms_site_test.UrbanProfileTest
