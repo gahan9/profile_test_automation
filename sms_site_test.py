@@ -3,6 +3,7 @@ import time
 import base64
 import requests
 import unittest
+import shutil
 from datetime import datetime
 
 from selenium.webdriver.chrome.webdriver import WebDriver
@@ -66,10 +67,12 @@ class BaseTest(unittest.TestCase):
         with open("captcha.png", 'rb') as f:
             captcha_content = f.read()
         img_post_data = "data:image/png;base64," + str(base64.b64encode(captcha_content))[2:-1]
-        print(API_URL)
         resp = requests.post(API_URL, data={"image": img_post_data})
-        print("TEXT-CAPTCHA>>", resp.json().get("text"))
         captcha = resp.json().get('text').strip()
+        print("TEXT-CAPTCHA>>", captcha)
+        if captcha:
+            _captcha = os.path.join(CAPTCHA_DIR, "{}.png".format(captcha))
+            shutil.move("captcha.png", _captcha)
         return captcha
 
     def _test_login(self):
