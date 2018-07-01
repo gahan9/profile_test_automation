@@ -20,13 +20,6 @@ from configure import *
 
 __author__ = "Gahan Saraiya"
 
-# constants
-BASE_API_DOMAIN = "http://demo221b.herokuapp.com"
-# BASE_API_DOMAIN = "https://127.0.0.1:8000"
-API_URL = BASE_API_DOMAIN + "/api/v1/img_ocr/"
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 def _sleep(seconds=2, flag=True):
     if flag:
@@ -103,25 +96,27 @@ class BaseTest(unittest.TestCase):
                 break
             last_height = new_height
 
-    def take_snapshot(self):
-        _name = "screen-shot_{}.png".format(datetime.now().strftime('%Y-%d-%m_%H.%M.%S'))
-        # _path = os.path.join(getattr(settings, 'MEDIA_ROOT'), 'selenium', _name)
-        _path = "F:\\snapshot.png"
-        self.selenium.save_screenshot(_path)
-        _body = self.selenium.find_element_by_tag_name('body')
-        print("Snapshot saved at: {}".format(_path))
-
-    def _test_town_directory(self):
-        element = self.selenium.find_element_by_xpath("//*[contains(text(), 'TOWN DIRECTORY')]")
-        element.click()
-        _sleep(3)
-        table = self.selenium.find_element_by_id("Table2")
+    def take_snapshot(self, session_prefix=None):
+        now = datetime.now()
+        now_date = now.strftime('%d_%b_%Y')
+        session_prefix = now.strftime('%Y-%d-%m_%H') if not session_prefix else session_prefix
+        _name = "screen-shot_{}.png".format(now.strftime('%Y-%d-%m_%H.%M.%S'))
+        _path = os.path.join(SNAPSHOT_DIR, 'selenium', now_date, session_prefix)
+        os.makedirs(_path, exist_ok=True)
+        self.selenium.save_screenshot(os.path.join(_path, _name))
+        print("Snapshot for url : {} saved at: {}".format(self.selenium.current_url, _path))
 
     class Meta:
         abstract = True
 
 
 class UrbanProfileTest(BaseTest):
+    def _test_town_directory(self):
+        element = self.selenium.find_element_by_xpath("//*[contains(text(), 'TOWN DIRECTORY')]")
+        element.click()
+        _sleep(3)
+        table = self.selenium.find_element_by_id("Table2")
+
     def test_ordered(self):
         self.selenium.set_window_size('1366', '768')
         # self.selenium.fullscreen_window()
@@ -160,5 +155,4 @@ class VillageProfileTest(BaseTest):
 
 if __name__ == "__main__":
     # unittest.main()
-    # print()
     pass
