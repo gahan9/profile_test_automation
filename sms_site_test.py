@@ -1,12 +1,9 @@
 # coding=utf-8
-from unittest import skip
-
-__author__ = "Gahan Saraiya"
-import os
 import time
-import sys
-import json
+import base64
+import requests
 import unittest
+from datetime import datetime
 
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.support.select import Select
@@ -17,20 +14,18 @@ from selenium.webdriver.common.keys import Keys
 # imports for cropping snapshot
 from PIL import Image
 from io import BytesIO
-import base64
-import requests
+
+# imports constants
+from configure import *
+
+__author__ = "Gahan Saraiya"
 
 # constants
 BASE_API_DOMAIN = "http://demo221b.herokuapp.com"
 # BASE_API_DOMAIN = "https://127.0.0.1:8000"
 API_URL = BASE_API_DOMAIN + "/api/v1/img_ocr/"
 
-BROWSER_DRIVER = "chromedriver.exe"
-# BROWSER_DRIVER = "geckodriver.exe"
-
-CREDENTIAL_JSON = "credential.json"
-with open(CREDENTIAL_JSON, "r") as f:
-    CREDENTIALS = json.loads(f.read())
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def _sleep(seconds=2, flag=True):
@@ -42,6 +37,7 @@ class BaseTest(unittest.TestCase):
     live_server_url = "http://urbanprofile.gujarat.gov.in/"
     chrome_driver_path = BROWSER_DRIVER
     credentials = CREDENTIALS
+    scroll_pause_time = 0.5
 
     def setUp(self):
         self.opts = webdriver.ChromeOptions()
@@ -53,7 +49,8 @@ class BaseTest(unittest.TestCase):
         # self.selenium.close()
         # super().tearDownClass()
 
-    def crop_image(self, img_element, snapshot):
+    @staticmethod
+    def crop_image(img_element, snapshot):
         location, size = img_element.location, img_element.size
 
         img = Image.open(BytesIO(snapshot))
@@ -64,7 +61,8 @@ class BaseTest(unittest.TestCase):
         img = img.crop((left, top, right, bottom))
         return img
 
-    def read_image(self, img):
+    @staticmethod
+    def read_image(img):
         img.save("captcha.png")
         with open("captcha.png", 'rb') as f:
             captcha_content = f.read()
@@ -91,8 +89,6 @@ class BaseTest(unittest.TestCase):
         self.selenium.find_element_by_id('btn_login').click()
 
     def scroll(self):
-        SCROLL_PAUSE_TIME = 0.5
-
         # Get scroll height
         last_height = self.selenium.execute_script("return document.body.scrollHeight")
 
@@ -100,7 +96,7 @@ class BaseTest(unittest.TestCase):
             # Scroll down to bottom
             self.selenium.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             # Wait to load page
-            time.sleep(SCROLL_PAUSE_TIME)
+            time.sleep(self.scroll_pause_time)
             # Calculate new scroll height and compare with last scroll height
             new_height = self.selenium.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
@@ -108,7 +104,7 @@ class BaseTest(unittest.TestCase):
             last_height = new_height
 
     def take_snapshot(self):
-        # _name = "screen-shot_{}.png".format(timezone.now().strftime('%Y-%d-%m_%H.%M.%S'))
+        _name = "screen-shot_{}.png".format(datetime.now().strftime('%Y-%d-%m_%H.%M.%S'))
         # _path = os.path.join(getattr(settings, 'MEDIA_ROOT'), 'selenium', _name)
         _path = "F:\\snapshot.png"
         self.selenium.save_screenshot(_path)
@@ -164,4 +160,5 @@ class VillageProfileTest(BaseTest):
 
 if __name__ == "__main__":
     # unittest.main()
+    # print()
     pass
