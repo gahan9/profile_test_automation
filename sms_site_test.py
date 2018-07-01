@@ -33,9 +33,15 @@ class BaseTest(unittest.TestCase):
     scroll_pause_time = 0.5
 
     def setUp(self):
-        self.opts = webdriver.ChromeOptions()
-        self.opts.add_experimental_option("detach", True)
-        self.selenium = webdriver.Chrome(self.chrome_driver_path, options=self.opts)
+        if BROWSER is "chrome":
+            self.opts = webdriver.ChromeOptions()
+            self.opts.add_experimental_option("detach", True)
+            self.opts.add_argument("--disable-extensions")
+            self.selenium = webdriver.Chrome(self.chrome_driver_path, options=self.opts)
+        else:
+            self.opts = webdriver.FirefoxOptions()
+            self.opts.add_argument("--detach")
+            self.selenium = webdriver.Firefox()
 
     def tearDown(self):
         pass
@@ -60,6 +66,7 @@ class BaseTest(unittest.TestCase):
         with open("captcha.png", 'rb') as f:
             captcha_content = f.read()
         img_post_data = "data:image/png;base64," + str(base64.b64encode(captcha_content))[2:-1]
+        print(API_URL)
         resp = requests.post(API_URL, data={"image": img_post_data})
         print("TEXT-CAPTCHA>>", resp.json().get("text"))
         captcha = resp.json().get('text').strip()
