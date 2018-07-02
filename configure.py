@@ -1,3 +1,4 @@
+# coding=utf-8
 import os
 import json
 import configparser
@@ -11,7 +12,7 @@ SNAPSHOT_DIR = os.path.join(BASE_DIR, "snapshots")
 CAPTCHA_DIR = os.path.join(BASE_DIR, "captchas")
 CONFIG_LOCATION = "defaults.config"
 CREDENTIAL_JSON = "credential.json"
-if PLATFORM is "win32":
+if PLATFORM == "win32":
     BROWSER_DRIVERS = {
         "chrome": "chromedriver.exe",
         "firefox": "geckodriver.exe"

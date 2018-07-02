@@ -29,20 +29,20 @@ def _sleep(seconds=2, flag=True):
 
 class BaseTest(unittest.TestCase):
     live_server_url = "http://urbanprofile.gujarat.gov.in/"
-    chrome_driver_path = BROWSER_DRIVER
+    browser_driver = BROWSER_DRIVER
     credentials = CREDENTIALS
     scroll_pause_time = 0.5
 
     def setUp(self):
-        if BROWSER is "chrome":
+        if BROWSER == "chrome":
             self.opts = webdriver.ChromeOptions()
             self.opts.add_experimental_option("detach", True)
             self.opts.add_argument("--disable-extensions")
-            self.selenium = webdriver.Chrome(self.chrome_driver_path, options=self.opts)
+            self.selenium = webdriver.Chrome(self.browser_driver, options=self.opts)
         else:
-            self.opts = webdriver.FirefoxOptions()
-            self.opts.add_argument("--detach")
-            self.selenium = webdriver.Firefox()
+            # self.opts = webdriver.FirefoxOptions()
+            # self.opts.add_argument("--detach")
+            self.selenium = webdriver.Firefox(self.browser_driver)
 
     def tearDown(self):
         pass
