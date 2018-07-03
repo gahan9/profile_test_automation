@@ -1,4 +1,5 @@
 # coding=utf-8
+import csv
 import logging
 import time
 import base64
@@ -6,6 +7,7 @@ import requests
 import unittest
 import shutil
 from datetime import datetime
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
@@ -146,6 +148,8 @@ class UrbanProfileTest(BaseTest):
 class VillageProfileTest(BaseTest):
     live_server_url = "http://villageprofile.gujarat.gov.in/"
     logger = logging.getLogger('sms_automation_test.VillageProfileTest')
+    detail_report_file = os.path.join(DOWNLOAD_DIR, "detailreport.xls")
+    csv_content_holder = []
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -170,6 +174,7 @@ class VillageProfileTest(BaseTest):
         sectors = ['Population', 'Health_Facility', 'Health_Doctors', 'Health_Other', 'Drinking Water', 'Sanitation', 'Electrification', 'Nutrition', 'Rural Road', 'Tourism', 'Transportation & Communication', 'Animal Husbandry', 'Other Amenities', 'Literacy', 'Employment and Social Security', 'Others', 'Worker', 'BPL Family', 'Livestock', 'Land Use Pattern', 'Primary Education', 'Secondary Education', 'Higher Secondary Education']
         """
         url_to_explore = self.live_server_url + "DetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
+        self.logger.info("Exploring Detail Report: {}".format(url_to_explore))
         self.selenium.get(url_to_explore)
         district_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District")  # select district pop up
         districts = [(x.text, x.get_attribute('value')) for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
@@ -178,18 +183,67 @@ class VillageProfileTest(BaseTest):
         timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select date
         timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
         #  ['31-03-2018', '30-06-2017', '31-03-2017', '01-04-2016', '01-04-2015', '01-04-2014', '01-04-2013']
-        for district in districts:
+        for district, district_code in districts:
+            self.logger.info("Working for District: {} ({})".format(district, district_code))
             for sector in sectors:
+                self.logger.debug("working for sector: {}".format(sector))
                 for timeline in timelines:
                     self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
                     self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(sector)
                     self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year").send_keys(timeline)
                     get_excel_button = self.selenium.find_element_by_id("ContentPlaceHolder1_Button3")
                     get_excel_button.click()
-
-                    break
+                    _sleep(3)  # sleep for a while to avoid file not found error
+                    self.read_file(district, sector, timeline)
+                    self.remove_file(district, sector, timeline)
+                self.rename_file("{}_{}".format(district, sector), content=self.csv_content_holder)
+                self.logger.debug("Value of content holder: >> {} (length: {}) <<".format(self.csv_content_holder, len(self.csv_content_holder)))
+                self.csv_content_holder = []
                 break
             break
+
+    def read_file(self, *args):
+        # new_name = "_".join(args)
+        new_name = "_".join(args[:2])
+        try:
+            with open(self.detail_report_file, "r") as f:
+                content = f.read()
+        except FileNotFoundError as e:
+            self.logger.error("File Note Found!! Exception: {}".format(e))
+            _sleep(5)
+            return self.read_file()
+        soup = BeautifulSoup(content, "html.parser")
+        table = soup.find('table', {'id': 'ContentPlaceHolder1_GridView1'})
+        table_content = [
+            [j.text.strip() for j in i.find_all('td')] if i.find_all('td') else [j.text.strip() for j in i.find_all('th')]
+            for i in table.find_all('tr')
+        ]
+        # Table Headers would be:
+        # ['Sr.No', 'District Name', 'Taluka Name', 'Village Name', 'No. Of Household', 'Total Population', 'Male', 'Female',
+        # 'Total SC Population', 'SC Male', 'SC Female', 'Total ST Population', 'ST Male', 'ST Female']
+        table_header, table_data = table_content[0], table_content[1:]
+        self.logger.info("Generated table data Headers: {}".format(table_header))
+        self.csv_content_holder = self.csv_content_holder + table_data if self.csv_content_holder else self.csv_content_holder + table_content
+        # self.rename_file(new_name, content=table_content)
+
+    def rename_file(self, new_name, content=None):
+        if content:
+            file_location = os.path.join(DOWNLOAD_DIR, "{}.csv".format(new_name))
+            fieldnames, data = content[0], content[1:]
+            with open(file_location, 'w', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                for row in content:
+                    writer.writerow(row)
+            self.remove_file()
+        else:
+            file_location = os.path.join(DOWNLOAD_DIR, "{}.html".format(new_name))
+            shutil.move(self.detail_report_file, file_location)
+
+    def remove_file(self, *args):
+        new_name = "_".join(args)
+        file_location = os.path.join(DOWNLOAD_DIR, "{}.html".format(new_name))
+        shutil.move(self.detail_report_file, file_location)
+        # os.remove(self.detail_report_file)
 
     def test_ordered(self):
         self.selenium.set_window_size('1366', '768')
