@@ -234,7 +234,7 @@ class VillageProfileTest(BaseTest):
                 writer = csv.writer(csv_file)
                 for row in content:
                     writer.writerow(row)
-            self.remove_file()
+            # self.remove_file()
         else:
             file_location = os.path.join(DOWNLOAD_DIR, "{}.html".format(new_name))
             shutil.move(self.detail_report_file, file_location)
