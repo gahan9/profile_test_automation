@@ -1,14 +1,11 @@
 # coding=utf-8
+import logging
 import time
 import base64
 import requests
 import unittest
 import shutil
 from datetime import datetime
-
-from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.support.select import Select
-
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
@@ -35,14 +32,19 @@ class BaseTest(unittest.TestCase):
 
     def setUp(self):
         if BROWSER == "chrome":
-            self.opts = webdriver.ChromeOptions()
-            self.opts.add_experimental_option("detach", True)
-            self.opts.add_argument("--disable-extensions")
-            self.selenium = webdriver.Chrome(self.browser_driver, options=self.opts)
+            options = webdriver.ChromeOptions()
+            preferences = {"download.default_directory": DOWNLOAD_DIR}
+            options.add_experimental_option("prefs", preferences)
+            options.add_experimental_option("detach", True)
+            options.add_argument("--disable-extensions")
+            self.selenium = webdriver.Chrome(executable_path=self.browser_driver, options=options)
         else:
-            # self.opts = webdriver.FirefoxOptions()
-            # self.opts.add_argument("--detach")
-            self.selenium = webdriver.Firefox(self.browser_driver)
+            profile = webdriver.FirefoxProfile()
+            profile.set_preference('browser.download.folderList', 2)  # custom location
+            profile.set_preference('browser.download.manager.showWhenStarting', False)
+            profile.set_preference('browser.download.dir', DOWNLOAD_DIR)
+            profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'text/csv')
+            self.selenium = webdriver.Firefox(executable_path=self.browser_driver, firefox_profile=profile)
 
     def tearDown(self):
         pass
@@ -140,6 +142,7 @@ class UrbanProfileTest(BaseTest):
 
 class VillageProfileTest(BaseTest):
     live_server_url = "http://villageprofile.gujarat.gov.in/"
+    logger = logging.getLogger('sms_automation_test.VillageProfileTest')
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -156,11 +159,42 @@ class VillageProfileTest(BaseTest):
         captcha_input.send_keys(captcha)
         _sleep(1)
         self.selenium.find_element_by_id('LoginButton').click()
+        self.logger.info("Clicked on login")
+
+    def explore_detail_report(self):
+        """
+        districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
+        sectors = ['Population', 'Health_Facility', 'Health_Doctors', 'Health_Other', 'Drinking Water', 'Sanitation', 'Electrification', 'Nutrition', 'Rural Road', 'Tourism', 'Transportation & Communication', 'Animal Husbandry', 'Other Amenities', 'Literacy', 'Employment and Social Security', 'Others', 'Worker', 'BPL Family', 'Livestock', 'Land Use Pattern', 'Primary Education', 'Secondary Education', 'Higher Secondary Education']
+        """
+        url_to_explore = self.live_server_url + "DetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
+        self.selenium.get(url_to_explore)
+        district_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District")  # select district pop up
+        districts = [(x.text, x.get_attribute('value')) for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
+        sector_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population")  # select sector
+        sectors = [x.text for x in sector_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+        timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select date
+        timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+        #  ['31-03-2018', '30-06-2017', '31-03-2017', '01-04-2016', '01-04-2015', '01-04-2014', '01-04-2013']
+        for district in districts:
+            for sector in sectors:
+                for timeline in timelines:
+                    self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
+                    self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(sector)
+                    self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year").send_keys(timeline)
+                    get_excel_button = self.selenium.find_element_by_id("ContentPlaceHolder1_Button3")
+                    get_excel_button.click()
+
+                    break
+                break
+            break
 
     def test_ordered(self):
         self.selenium.set_window_size('1366', '768')
+        self.logger.info("Initialized test with custom screen resolution W: {} and H: {}".format(BROWSER_WIDTH, BROWSER_HEIGHT))
         _sleep(1)
         self._test_login()
+        _sleep(2)
+        self.explore_detail_report()
 
 
 if __name__ == "__main__":
