@@ -33,7 +33,10 @@ class BaseTest(unittest.TestCase):
     def setUp(self):
         if BROWSER == "chrome":
             options = webdriver.ChromeOptions()
-            preferences = {"download.default_directory": DOWNLOAD_DIR}
+            preferences = {
+                "download.default_directory": DOWNLOAD_DIR,
+                "download.prompt_for_download": False,
+            }
             options.add_experimental_option("prefs", preferences)
             options.add_experimental_option("detach", True)
             options.add_argument("--disable-extensions")

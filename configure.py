@@ -81,7 +81,7 @@ class Settings(object):
 
 settings = Settings()  # settings object
 CONFIG = settings.read_config(CONFIG_LOCATION)  # get config
-DOWNLOAD_DIR = CONFIG.get("BROWSER_CONFIG", "DOWNLOAD_DIRECTORY") if os.path.exists(CONFIG.get("BROWSER_CONFIG", "DOWNLOAD_DIRECTORY")) else DOWNLOAD_DIR
+# DOWNLOAD_DIR = CONFIG.get("BROWSER_CONFIG", "DOWNLOAD_DIRECTORY") if os.path.exists(CONFIG.get("BROWSER_CONFIG", "DOWNLOAD_DIRECTORY")) else DOWNLOAD_DIR
 CREDENTIALS = settings.read_json(CREDENTIAL_JSON)  # get credentials
 BROWSER = CONFIG.get("BROWSER_CONFIG", "BROWSER")  # get defined browser
 BROWSER_WIDTH = CONFIG.get("BROWSER_CONFIG", "WIDTH")
