@@ -228,20 +228,24 @@ class VillageProfileTest(BaseTest):
 
     def rename_file(self, new_name, content=None):
         if content:
-            file_location = os.path.join(DOWNLOAD_DIR, "{}.csv".format(new_name))
-            fieldnames, data = content[0], content[1:]
+            folder_name = os.path.join(DOWNLOAD_DIR, "csv")
+            os.makedirs(folder_name, exist_ok=True)
+            file_location = os.path.join(folder_name, "{}_detail_report.csv".format(new_name))
             with open(file_location, 'w', newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 for row in content:
                     writer.writerow(row)
-            # self.remove_file()
         else:
-            file_location = os.path.join(DOWNLOAD_DIR, "{}.html".format(new_name))
+            folder_name = os.path.join(DOWNLOAD_DIR, "html", new_name)
+            os.makedirs(folder_name, exist_ok=True)
+            file_location = os.path.join(folder_name, "{}.html".format(new_name))
             shutil.move(self.detail_report_file, file_location)
 
     def remove_file(self, *args):
+        folder_name = os.path.join(DOWNLOAD_DIR, "html", "_".join(args[:2]))
+        os.makedirs(folder_name, exist_ok=True)
         new_name = "_".join(args)
-        file_location = os.path.join(DOWNLOAD_DIR, "{}.html".format(new_name))
+        file_location = os.path.join(folder_name, "{}_detail_report.html".format(new_name))
         shutil.move(self.detail_report_file, file_location)
         # os.remove(self.detail_report_file)
 
