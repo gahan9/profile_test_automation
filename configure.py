@@ -13,6 +13,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SNAPSHOT_DIR = os.path.join(BASE_DIR, "snapshots")
 CAPTCHA_DIR = os.path.join(BASE_DIR, "captchas")
 DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
+CSV_DIR = os.path.join(DOWNLOAD_DIR, "csv")
+HTML_DIR = os.path.join(DOWNLOAD_DIR, "html")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 CONFIG_LOCATION = "defaults.config"
 CREDENTIAL_JSON = "credential.json"
@@ -38,7 +40,7 @@ class Settings(object):
     logger = logging.getLogger('sms_automation_test')
 
     def __init__(self):
-        for path in [SNAPSHOT_DIR, CAPTCHA_DIR, DOWNLOAD_DIR, LOG_DIR]:
+        for path in [SNAPSHOT_DIR, CAPTCHA_DIR, DOWNLOAD_DIR, LOG_DIR, CSV_DIR, HTML_DIR]:
             os.makedirs(path, exist_ok=True)
         self.configure_logger()
 

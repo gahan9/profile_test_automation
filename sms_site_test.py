@@ -31,6 +31,7 @@ class BaseTest(unittest.TestCase):
     browser_driver = BROWSER_DRIVER
     credentials = CREDENTIALS
     scroll_pause_time = 0.5
+    logger = logging.getLogger('UnitTest')
 
     def setUp(self):
         if BROWSER == "chrome":
@@ -50,6 +51,8 @@ class BaseTest(unittest.TestCase):
             profile.set_preference('browser.download.dir', DOWNLOAD_DIR)
             profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'text/csv')
             self.selenium = webdriver.Firefox(executable_path=self.browser_driver, firefox_profile=profile)
+        self.selenium.set_window_size(BROWSER_WIDTH, BROWSER_HEIGHT)
+        self.logger.info("Initialized test with custom screen resolution W: {} and H: {}".format(BROWSER_WIDTH, BROWSER_HEIGHT))
 
     def tearDown(self):
         pass
@@ -150,6 +153,7 @@ class VillageProfileTest(BaseTest):
     logger = logging.getLogger('sms_automation_test.VillageProfileTest')
     detail_report_file = os.path.join(DOWNLOAD_DIR, "detailreport.xls")
     csv_content_holder = []
+    table_content_holder = []
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -167,6 +171,77 @@ class VillageProfileTest(BaseTest):
         _sleep(1)
         self.selenium.find_element_by_id('LoginButton').click()
         self.logger.info("Clicked on login")
+
+    def explore_school_detail_report(self):
+        url_to_explore = self.live_server_url + "SchoolDetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
+        self.logger.info("Exploring Detail Report: {}".format(url_to_explore))
+        self.selenium.get(url_to_explore)
+        _sleep(2)
+        district_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District")  # select district pop up
+        districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
+        districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ',
+                     'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals',
+                     'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
+        for district in districts[:2]:
+            # _sleep(1)
+            self.logger.info("Working for District: {} ({})".format(district, "-"))
+            self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
+            # select talukas
+            _sleep(1)
+            taluka_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka")
+            talukas = [x.text for x in taluka_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
+            for taluka in talukas:
+                _sleep(1)
+                self.logger.debug("working for taluka: {}".format(taluka))
+                self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka").send_keys(taluka)
+                # select school type
+                school_type_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population")  # select sector
+                # school_types = [x.text for x in school_type_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+                school_types = ['Primary School', 'Secondary School', 'Higher Secondary School']
+                for school_type in school_types[0]:
+                    self.logger.debug("working for school_type: {}".format(school_type))
+                    self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
+                    # select timelines
+                    timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select year
+                    timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+                    for timeline in timelines:
+                        # self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
+                        # self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka").send_keys(taluka)
+                        # self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
+                        self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year").send_keys(timeline)
+                        view_report_btn = self.selenium.find_element_by_id("ContentPlaceHolder1_Button1")
+                        view_report_btn.click()
+                        if "ContentPlaceHolder1_GridView1" in self.selenium.page_source:
+                            table_content = self.parse_table(self.selenium.page_source, "ContentPlaceHolder1_GridView1", district, timeline)
+                            table_header, table_data = table_content[0], table_content[1:]
+                            self.logger.debug("Generated table data Headers: {}".format(table_header))
+                            self.table_content_holder = self.table_content_holder + table_data if self.table_content_holder else self.table_content_holder + table_content
+                        else:
+                            self.logger.info("No data for choice: District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
+                                    district, taluka, school_type, timeline))
+                self.write_content('{}_{}'.format(district, school_types[0]), content=self.table_content_holder)
+                self.logger.debug("Value of content holder: >> {} (length: {}) <<".format(self.csv_content_holder, len(self.csv_content_holder)))
+            self.table_content_holder = []
+
+    def parse_table(self, page_source, table_id, district, year):
+        self.logger.debug("Parsing page source for table id: {}".format(table_id))
+        soup = BeautifulSoup(page_source, "html.parser")
+        table = soup.find("table", {"id": table_id})
+        table_content = [
+            [j.text.strip() for j in i.find_all('td')] + [year]
+            if i.find_all('td') else ["DistrictName"] + [j.text.strip() for j in i.find_all('th')] + ["Timeline"]
+            for i in table.find_all('tr')
+        ]
+        self.logger.debug("Content of length (with header): {}".format(len(table_content)))
+        return table_content
+
+    def write_content(self, prefix_name, content):
+        self.logger.debug("Writing content (length: {}) for {}".format(len(content), prefix_name))
+        file_location = os.path.join(CSV_DIR, "{}_school_detail_report.csv".format(prefix_name))
+        with open(file_location, 'w', newline='', encoding='utf-8') as csv_file:
+            writer = csv.writer(csv_file)
+            for row in content:
+                writer.writerow(row)
 
     def explore_detail_report(self):
         """
@@ -215,7 +290,7 @@ class VillageProfileTest(BaseTest):
         soup = BeautifulSoup(content, "html.parser")
         table = soup.find('table', {'id': 'ContentPlaceHolder1_GridView1'})
         table_content = [
-            [j.text.strip() for j in i.find_all('td')] if i.find_all('td') else [j.text.strip() for j in i.find_all('th')]
+            [j.text.encode('utf8').strip() for j in i.find_all('td')] if i.find_all('td') else [j.text.strip() for j in i.find_all('th')]
             for i in table.find_all('tr')
         ]
         # Table Headers would be:
@@ -250,14 +325,17 @@ class VillageProfileTest(BaseTest):
         # os.remove(self.detail_report_file)
 
     def test_ordered(self):
-        self.selenium.set_window_size('1366', '768')
-        self.logger.info("Initialized test with custom screen resolution W: {} and H: {}".format(BROWSER_WIDTH, BROWSER_HEIGHT))
         _sleep(1)
         self._test_login()
         _sleep(2)
-        self.explore_detail_report()
+        self.explore_school_detail_report()
 
 
 if __name__ == "__main__":
     # unittest.main()
+    # self = VillageProfileTest()
+    # self.setUp()
+    # self._test_login()
+    # _sleep(2)
+    # self.explore_school_detail_report()
     pass
