@@ -54,7 +54,7 @@ class BaseTest(unittest.TestCase):
             profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'text/csv')
             self.selenium = webdriver.Firefox(executable_path=self.browser_driver, firefox_profile=profile)
         self.selenium.set_window_size(BROWSER_WIDTH, BROWSER_HEIGHT)
-        self.logger.info("Initialized test with custom screen resolution W: {} and H: {}".format(BROWSER_WIDTH, BROWSER_HEIGHT))
+        self.logger.info("Initialized test with BROWSER: {} custom screen resolution W: {} and H: {}".format(BROWSER, BROWSER_WIDTH, BROWSER_HEIGHT))
 
     def tearDown(self):
         pass
@@ -73,15 +73,14 @@ class BaseTest(unittest.TestCase):
         img = img.crop((left, top, right, bottom))
         return img
 
-    @staticmethod
-    def read_image(img):
+    def read_image(self, img):
         img.save("captcha.png")
         with open("captcha.png", 'rb') as f:
             captcha_content = f.read()
         img_post_data = "data:image/png;base64," + str(base64.b64encode(captcha_content))[2:-1]
         resp = requests.post(API_URL, data={"image": img_post_data})
         captcha = resp.json().get('text').strip()
-        print("TEXT-CAPTCHA>>", captcha)
+        self.logger.info("TEXT-CAPTCHA>> {}".format(captcha))
         if captcha:
             _captcha = os.path.join(CAPTCHA_DIR, "{}.png".format(captcha))
             shutil.move("captcha.png", _captcha)
@@ -126,7 +125,7 @@ class BaseTest(unittest.TestCase):
         _path = os.path.join(SNAPSHOT_DIR, 'selenium', now_date, session_prefix)
         os.makedirs(_path, exist_ok=True)
         self.selenium.save_screenshot(os.path.join(_path, _name))
-        print("Snapshot for url : {} saved at: {}".format(self.selenium.current_url, _path))
+        self.logger.info("Snapshot for url : {} saved at: {}".format(self.selenium.current_url, _path))
 
     class Meta:
         abstract = True
@@ -152,7 +151,7 @@ class UrbanProfileTest(BaseTest):
 
 class VillageProfileTest(BaseTest):
     live_server_url = "http://villageprofile.gujarat.gov.in/"
-    logger = logging.getLogger('sms_automation_test.VillageProfileTest')
+    logger = logging.getLogger('VillageProfileTest')
     detail_report_file = os.path.join(DOWNLOAD_DIR, "detailreport.xls")
     csv_content_holder = []
     table_content_holder = []
@@ -181,16 +180,18 @@ class VillageProfileTest(BaseTest):
 
     def explore_school_detail_report(self):
         url_to_explore = self.live_server_url + "SchoolDetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
-        self.logger.info("Exploring Detail Report: {}".format(url_to_explore))
+        self.logger.info("Exploring Detail Report from: {}".format(url_to_explore))
         self.selenium.get(url_to_explore)
         _sleep(2)
         district_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District")  # select district pop up
         districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
         districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
+        self.logger.info("Exploring {} districts:\n{}".format(len(districts), districts))
         for district in districts:
             # _sleep(1)
             self.explore_school_district(district)
             self.table_content_holder = []
+        self.logger.info("Exploration completed")
 
     def explore_school_district(self, district):
         self.logger.info("Working for District: {} ({})".format(district, "-"))
@@ -200,11 +201,11 @@ class VillageProfileTest(BaseTest):
         talukas = [x.text for x in taluka_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
         for taluka in talukas:
             self.explore_school_district_taluka(district, taluka)
-            self.write_content(slugify('{}_{}'.format(district, self.school_type)), self.school_type, content=self.table_content_holder)
+            self.write_content(slugify('{}_{}'.format(district, self.school_type[0])), self.school_type[0], content=self.table_content_holder)
             self.logger.debug("Value of content holder: >> {} (length: {}) <<".format(self.csv_content_holder, len(self.csv_content_holder)))
 
     def explore_school_district_taluka(self, district, taluka):
-        self.logger.debug("working for taluka: {}".format(taluka))
+        self.logger.debug("Working for taluka: {}".format(taluka))
         self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka").send_keys(taluka)
         # school_type_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population")  # select sector
         # school_types = [x.text for x in school_type_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
