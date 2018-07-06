@@ -57,9 +57,9 @@ class Settings(object):
         # fh = logging.FileHandler('sms_automation_test_{}.log'.format(datetime.now().strftime('%Y-%d-%m_%H.%M.%S')))
         # fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()  # create console handler with a higher log level
-        ch.setLevel(logging.ERROR)
+        ch.setLevel(logging.DEBUG)
         # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s [%(name)-12s] [%(levelname)s]: %(message)s')
         # fh.setFormatter(formatter)
         ch.setFormatter(formatter)
         # add the handlers to the logger

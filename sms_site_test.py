@@ -6,16 +6,18 @@ import base64
 import requests
 import unittest
 import shutil
+
+from selenium.common.exceptions import TimeoutException
+from slugify import slugify
 from datetime import datetime
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-
 # imports for cropping snapshot
 from PIL import Image
 from io import BytesIO
 
-# imports constants
+
 from configure import *
 
 __author__ = "Gahan Saraiya"
@@ -154,6 +156,11 @@ class VillageProfileTest(BaseTest):
     detail_report_file = os.path.join(DOWNLOAD_DIR, "detailreport.xls")
     csv_content_holder = []
     table_content_holder = []
+    school_types = ['Primary School', 'Secondary School', 'Higher Secondary School']
+
+    @property
+    def school_type(self):
+        return [self.school_types[1]]
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -179,65 +186,79 @@ class VillageProfileTest(BaseTest):
         _sleep(2)
         district_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District")  # select district pop up
         districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
-        districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ',
-                     'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals',
-                     'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
-        for district in districts[:2]:
+        districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
+        for district in districts:
             # _sleep(1)
-            self.logger.info("Working for District: {} ({})".format(district, "-"))
-            self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
-            # select talukas
-            _sleep(1)
-            taluka_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka")
-            talukas = [x.text for x in taluka_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
-            for taluka in talukas:
-                _sleep(1)
-                self.logger.debug("working for taluka: {}".format(taluka))
-                self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka").send_keys(taluka)
-                # select school type
-                school_type_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population")  # select sector
-                # school_types = [x.text for x in school_type_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
-                school_types = ['Primary School', 'Secondary School', 'Higher Secondary School']
-                for school_type in school_types[0]:
-                    self.logger.debug("working for school_type: {}".format(school_type))
-                    self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
-                    # select timelines
-                    timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select year
-                    timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
-                    for timeline in timelines:
-                        # self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
-                        # self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka").send_keys(taluka)
-                        # self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
-                        self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year").send_keys(timeline)
-                        view_report_btn = self.selenium.find_element_by_id("ContentPlaceHolder1_Button1")
-                        view_report_btn.click()
-                        if "ContentPlaceHolder1_GridView1" in self.selenium.page_source:
-                            table_content = self.parse_table(self.selenium.page_source, "ContentPlaceHolder1_GridView1", district, timeline)
-                            table_header, table_data = table_content[0], table_content[1:]
-                            self.logger.debug("Generated table data Headers: {}".format(table_header))
-                            self.table_content_holder = self.table_content_holder + table_data if self.table_content_holder else self.table_content_holder + table_content
-                        else:
-                            self.logger.info("No data for choice: District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
-                                    district, taluka, school_type, timeline))
-                self.write_content('{}_{}'.format(district, school_types[0]), content=self.table_content_holder)
-                self.logger.debug("Value of content holder: >> {} (length: {}) <<".format(self.csv_content_holder, len(self.csv_content_holder)))
+            self.explore_school_district(district)
             self.table_content_holder = []
+
+    def explore_school_district(self, district):
+        self.logger.info("Working for District: {} ({})".format(district, "-"))
+        self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District").send_keys(district)
+        # select talukas
+        taluka_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka")
+        talukas = [x.text for x in taluka_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
+        for taluka in talukas:
+            self.explore_school_district_taluka(district, taluka)
+            self.write_content(slugify('{}_{}'.format(district, self.school_type)), self.school_type, content=self.table_content_holder)
+            self.logger.debug("Value of content holder: >> {} (length: {}) <<".format(self.csv_content_holder, len(self.csv_content_holder)))
+
+    def explore_school_district_taluka(self, district, taluka):
+        self.logger.debug("working for taluka: {}".format(taluka))
+        self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_Taluka").send_keys(taluka)
+        # school_type_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population")  # select sector
+        # school_types = [x.text for x in school_type_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+        school_types = self.school_type
+        for school_type in school_types:
+            self.logger.debug("working for school_type: {}".format(school_type))
+            self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
+            # select timelines
+            timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select year
+            timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+            for timeline in timelines:
+                self.grab_school_data(district, taluka, timeline)
+                self.logger.info("[LOOP-END] Completed Combination loop for District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
+                        district, taluka, self.school_type, timeline))
+
+    def grab_school_data(self, district, taluka, timeline):
+        self.logger.debug("working for timeline: {}".format(timeline))
+        self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year").send_keys(timeline)
+        view_report_btn = self.selenium.find_element_by_id("ContentPlaceHolder1_Button1")
+        try:
+            view_report_btn.click()
+        except TimeoutException as e:
+            _sleep(5)
+            self.selenium.refresh()
+            url_to_explore = self.live_server_url + "SchoolDetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
+            self.logger.info("Exploring Detail Report: {}".format(url_to_explore))
+            self.selenium.get(url_to_explore)
+            self.explore_school_district(district)
+        if "ContentPlaceHolder1_GridView1" in self.selenium.page_source:
+            table_content = self.parse_table(self.selenium.page_source, "ContentPlaceHolder1_GridView1", district, timeline)
+            table_header, table_data = table_content[0], table_content[1:]
+            self.logger.debug("Generated table data Headers: {}".format(table_header))
+            self.table_content_holder = self.table_content_holder + table_data if self.table_content_holder else self.table_content_holder + table_content
+        else:
+            self.logger.info("No data for choice: District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
+                    district, taluka, self.school_type, timeline))
 
     def parse_table(self, page_source, table_id, district, year):
         self.logger.debug("Parsing page source for table id: {}".format(table_id))
         soup = BeautifulSoup(page_source, "html.parser")
         table = soup.find("table", {"id": table_id})
         table_content = [
-            [j.text.strip() for j in i.find_all('td')] + [year]
+            [district] + [j.text.strip() for j in i.find_all('td')] + [year]
             if i.find_all('td') else ["DistrictName"] + [j.text.strip() for j in i.find_all('th')] + ["Timeline"]
             for i in table.find_all('tr')
         ]
         self.logger.debug("Content of length (with header): {}".format(len(table_content)))
         return table_content
 
-    def write_content(self, prefix_name, content):
+    def write_content(self, prefix_name, school_type, content):
         self.logger.debug("Writing content (length: {}) for {}".format(len(content), prefix_name))
-        file_location = os.path.join(CSV_DIR, "{}_school_detail_report.csv".format(prefix_name))
+        file_path = os.path.join(CSV_DIR, school_type)
+        os.makedirs(file_path, exist_ok=True)
+        file_location = os.path.join(file_path, "{}_school_detail_report.csv".format(prefix_name))
         with open(file_location, 'w', newline='', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file)
             for row in content:
