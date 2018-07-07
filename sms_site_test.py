@@ -151,7 +151,7 @@ class UrbanProfileTest(BaseTest):
 
 class VillageProfileTest(BaseTest):
     live_server_url = "http://villageprofile.gujarat.gov.in/"
-    logger = logging.getLogger('VillageProfileTest')
+    logger = logging.getLogger('sms_automation.VillageProfileTest')
     detail_report_file = os.path.join(DOWNLOAD_DIR, "detailreport.xls")
     csv_content_holder = []
     table_content_holder = []
@@ -159,7 +159,7 @@ class VillageProfileTest(BaseTest):
 
     @property
     def school_type(self):
-        return [self.school_types[1]]
+        return [self.school_types[0]]
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -187,7 +187,7 @@ class VillageProfileTest(BaseTest):
         districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
         districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
         self.logger.info("Exploring {} districts:\n{}".format(len(districts), districts))
-        for district in districts:
+        for district in districts[8:]:
             # _sleep(1)
             self.explore_school_district(district)
             self.table_content_holder = []
@@ -229,10 +229,15 @@ class VillageProfileTest(BaseTest):
             view_report_btn.click()
         except TimeoutException as e:
             _sleep(5)
-            self.selenium.refresh()
             url_to_explore = self.live_server_url + "SchoolDetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
             self.logger.info("Exploring Detail Report: {}".format(url_to_explore))
-            self.selenium.get(url_to_explore)
+            try:
+                self._test_login()
+                self.selenium.get(url_to_explore)
+            except TimeoutException:
+                _sleep(15)
+                self._test_login()
+                self.selenium.get(url_to_explore)
             self.explore_school_district(district)
         if "ContentPlaceHolder1_GridView1" in self.selenium.page_source:
             table_content = self.parse_table(self.selenium.page_source, "ContentPlaceHolder1_GridView1", district, timeline)
