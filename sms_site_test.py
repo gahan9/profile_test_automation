@@ -151,7 +151,7 @@ class UrbanProfileTest(BaseTest):
 
 class VillageProfileTest(BaseTest):
     live_server_url = "http://villageprofile.gujarat.gov.in/"
-    logger = logging.getLogger('sms_automation.VillageProfileTest')
+    logger = logging.getLogger('sms_automation_test.VillageProfileTest')
     detail_report_file = os.path.join(DOWNLOAD_DIR, "detailreport.xls")
     csv_content_holder = []
     table_content_holder = []
@@ -187,7 +187,7 @@ class VillageProfileTest(BaseTest):
         districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
         districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
         self.logger.info("Exploring {} districts:\n{}".format(len(districts), districts))
-        for district in districts[8:]:
+        for district in districts[14:]:
             # _sleep(1)
             self.explore_school_district(district)
             self.table_content_holder = []
@@ -201,7 +201,7 @@ class VillageProfileTest(BaseTest):
         talukas = [x.text for x in taluka_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
         for taluka in talukas:
             self.explore_school_district_taluka(district, taluka)
-            self.write_content(slugify('{}_{}'.format(district, self.school_type[0])), self.school_type[0], content=self.table_content_holder)
+            # self.write_content(slugify('{}_{}'.format(district, self.school_type[0])), self.school_type[0], content=self.table_content_holder)
             self.logger.debug("Value of content holder: >> {} (length: {}) <<".format(self.csv_content_holder, len(self.csv_content_holder)))
 
     def explore_school_district_taluka(self, district, taluka):
@@ -220,6 +220,7 @@ class VillageProfileTest(BaseTest):
                 self.grab_school_data(district, taluka, timeline)
                 self.logger.info("[LOOP-END] Completed Combination loop for District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
                         district, taluka, self.school_type, timeline))
+            self.write_content(slugify('{}_{}'.format(district, school_type)), school_type, content=self.table_content_holder)
 
     def grab_school_data(self, district, taluka, timeline):
         self.logger.debug("working for timeline: {}".format(timeline))
@@ -228,16 +229,22 @@ class VillageProfileTest(BaseTest):
         try:
             view_report_btn.click()
         except TimeoutException as e:
+            self.logger.error("Caught TimeoutException: {}\nReExploring.....".format(e))
             _sleep(5)
             url_to_explore = self.live_server_url + "SchoolDetailReport.aspx"  # "http://villageprofile.gujarat.gov.in/DetailReport.aspx"
             self.logger.info("Exploring Detail Report: {}".format(url_to_explore))
             try:
-                self._test_login()
                 self.selenium.get(url_to_explore)
-            except TimeoutException:
+                if self.selenium.find_element_by_id("btnlogout"):
+                    self._test_login()
+                    self.selenium.get(url_to_explore)
+            except TimeoutException as e:
+                self.logger.error("Caught TimeoutException: {}\nReExploring.....again...".format(e))
                 _sleep(15)
-                self._test_login()
                 self.selenium.get(url_to_explore)
+                if self.selenium.find_element_by_id("btnlogout"):
+                    self._test_login()
+                    self.selenium.get(url_to_explore)
             self.explore_school_district(district)
         if "ContentPlaceHolder1_GridView1" in self.selenium.page_source:
             table_content = self.parse_table(self.selenium.page_source, "ContentPlaceHolder1_GridView1", district, timeline)
