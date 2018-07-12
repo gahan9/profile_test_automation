@@ -145,7 +145,7 @@ class UrbanProfileTest(BaseTest):
         _sleep(1)
         self._test_login()
         _sleep(1)
-        self._test_town_directory()
+        # self._test_town_directory()
         _sleep(1)
 
 
