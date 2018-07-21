@@ -187,7 +187,7 @@ class VillageProfileTest(BaseTest):
         districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
         districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
         self.logger.info("Exploring {} districts:\n{}".format(len(districts), districts))
-        for district in districts[14:]:
+        for district in districts:
             # _sleep(1)
             self.explore_school_district(district)
             self.table_content_holder = []
@@ -215,7 +215,8 @@ class VillageProfileTest(BaseTest):
             self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
             # select timelines
             timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select year
-            timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+            # timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+            timelines = ["31-03-2018"]
             for timeline in timelines:
                 self.grab_school_data(district, taluka, timeline)
                 self.logger.info("[LOOP-END] Completed Combination loop for District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
@@ -260,8 +261,9 @@ class VillageProfileTest(BaseTest):
         soup = BeautifulSoup(page_source, "html.parser")
         table = soup.find("table", {"id": table_id})
         table_content = [
-            [district] + [j.text.strip() for j in i.find_all('td')] + [year]
-            if i.find_all('td') else ["DistrictName"] + [j.text.strip() for j in i.find_all('th')] + ["Timeline"]
+            [district] + [j.text.strip().replace("\n", "-") for j in i.find_all('td')] + [year]
+            if i.find_all('td')
+            else ["DistrictName"] + [j.text.strip() for j in i.find_all('th')] + ["Timeline"]
             for i in table.find_all('tr')
         ]
         self.logger.debug("Content of length (with header): {}".format(len(table_content)))
@@ -275,7 +277,7 @@ class VillageProfileTest(BaseTest):
         with open(file_location, 'w', newline='', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file)
             for row in content:
-                writer.writerow(row)
+                writer.writerow()
 
     def explore_detail_report(self):
         """
