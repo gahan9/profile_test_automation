@@ -1,5 +1,5 @@
 # coding=utf-8
-import csv
+import re
 import os
 import logging
 from datetime import datetime
@@ -44,12 +44,23 @@ def csv_merger(directory, headers=None, new_name="merge.csv"):
             headers = head_line if not headers else headers
         if head_line == headers:
             for line in f:
-                merge_csv.write(line)
+                merge_csv.write("{}\n".format(line.replace("\n", "")))
         else:
             logger.info("headers not matched for file: {}".format(file))
         f.close()
     merge_csv.close()
+    csv_fixer(new_csv)
     logger.info("Merged CSV stored at: {}".format(new_csv))
+
+
+def csv_fixer(file_location):
+    with open(file_location, encoding="utf-8") as fr:
+        orig_content = fr.read()
+        content = re.sub(r"[\n]{1,101}((?![A-Z]).*,)", r' \1', orig_content)
+    print(len(orig_content), len(content))
+    print(len(orig_content) - len(content))
+    with open(file_location, 'w', encoding="utf-8") as fw:
+        fw.write(content)
 
 
 if __name__ == "__main__":
