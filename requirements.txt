@@ -3,3 +3,4 @@ requests
 selenium
 configparser
 bs4
+slugify
