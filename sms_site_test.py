@@ -156,10 +156,12 @@ class VillageProfileTest(BaseTest):
     csv_content_holder = []
     table_content_holder = []
     school_types = ['Primary School', 'Secondary School', 'Higher Secondary School']
+    districts = ['Ahmadabad', 'Amreli', 'Anand', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari', 'Panch Mahals', 'Patan', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
 
     @property
     def school_type(self):
-        return [self.school_types[0]]
+        return self.school_types[1:]
+        return [self.school_types[1]]
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -185,7 +187,7 @@ class VillageProfileTest(BaseTest):
         _sleep(2)
         district_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_District")  # select district pop up
         districts = [x.text for x in district_selector.find_elements_by_tag_name("option") if not x.text[0] == "-"]
-        districts = ['Ahmadabad', 'Amreli', 'Anand  ', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad  ', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari  ', 'Panch Mahals', 'Patan  ', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
+        districts = self.districts
         self.logger.info("Exploring {} districts:\n{}".format(len(districts), districts))
         for district in districts:
             # _sleep(1)
@@ -261,7 +263,7 @@ class VillageProfileTest(BaseTest):
         soup = BeautifulSoup(page_source, "html.parser")
         table = soup.find("table", {"id": table_id})
         table_content = [
-            [district] + [j.text.strip().replace("\n", "-") for j in i.find_all('td')] + [year]
+            [district] + [j.text.strip().replace("\n", "-").replace(",", ";") for j in i.find_all('td')] + [year]
             if i.find_all('td')
             else ["DistrictName"] + [j.text.strip() for j in i.find_all('th')] + ["Timeline"]
             for i in table.find_all('tr')
@@ -277,7 +279,7 @@ class VillageProfileTest(BaseTest):
         with open(file_location, 'w', newline='', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file)
             for row in content:
-                writer.writerow()
+                writer.writerow(row)
 
     def explore_detail_report(self):
         """
