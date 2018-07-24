@@ -80,6 +80,14 @@ class Settings(object):
         credentials = content if content else self.default_credentials
         return credentials
 
+    def validate_date(self, date_string):
+        try:
+            datetime.strptime(date_string, "%d-%m-%Y")
+            return True
+        except Exception as e:
+            self.logger.info("Exception...Invalid Date: {}".format(e))
+            return False
+
 
 settings = Settings()  # settings object
 CONFIG = settings.read_config(CONFIG_LOCATION)  # get config
@@ -91,6 +99,8 @@ BROWSER_HEIGHT = CONFIG.get("BROWSER_CONFIG", "HEIGHT")
 BROWSER_DRIVER = BROWSER_DRIVERS.get(BROWSER, None) if BROWSER_DRIVERS.get(BROWSER, None) else BROWSER_DRIVERS["chrome"]  # set chrome as default if invalid browser name
 BASE_API_DOMAIN = CONFIG.get("API_CONFIG", "API_DOMAIN")  # API Domain
 API_URL = BASE_API_DOMAIN + CONFIG.get("API_CONFIG", "API_PATH")  # API url
+VILLAGE_PROFILE_DATE = CONFIG.get("VILLAGE_PROFILE_CONFIG", "DATE")  # API url
+VILLAGE_PROFILE_DATE = settings.validate_date(VILLAGE_PROFILE_DATE)
 settings.logger.info(
         "SYSTEM CONFIGS" +
         "\n\t\t\tBROWSER_DRIVER : " + BROWSER_DRIVER +
@@ -102,4 +112,5 @@ settings.logger.info(
         "\n\t\t\tDOWNLOAD_DIR : " + DOWNLOAD_DIR +
         "\n\t\t\tBASE_API_DOMAIN : " + BASE_API_DOMAIN +
         "\n\t\t\tAPI_URL : " + API_URL +
+        "\n\t\t\tVILLAGE_PROFILE_DATE : " + VILLAGE_PROFILE_DATE +
         "")

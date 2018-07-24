@@ -157,11 +157,11 @@ class VillageProfileTest(BaseTest):
     table_content_holder = []
     school_types = ['Primary School', 'Secondary School', 'Higher Secondary School']
     districts = ['Ahmadabad', 'Amreli', 'Anand', 'Arvalli', 'Banas Kantha', 'Bharuch', 'Bhavnagar', 'Botad', 'Chhota udepur', 'Devbhumi Dwarka', 'Dohad', 'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kachchh', 'Kheda', 'Mahesana', 'Mahisagar', 'Morbi', 'Narmada', 'Navsari', 'Panch Mahals', 'Patan', 'Porbandar ', 'Rajkot', 'Sabar Kantha', 'Surat', 'Surendranagar', 'Tapi', 'The Dangs', 'Vadodara', 'Valsad']
+    timestamp = VILLAGE_PROFILE_DATE if VILLAGE_PROFILE_DATE else None
 
     @property
     def school_type(self):
-        return self.school_types[1:]
-        return [self.school_types[1]]
+        return self.school_types
 
     def _test_login(self):
         self.selenium.get(self.live_server_url)
@@ -217,8 +217,8 @@ class VillageProfileTest(BaseTest):
             self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_population").send_keys(school_type)
             # select timelines
             timeline_selector = self.selenium.find_element_by_id("ContentPlaceHolder1_ddl_year")  # select year
-            # timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
-            timelines = ["31-03-2018"]
+            timelines = [x.text for x in timeline_selector.find_elements_by_tag_name("option") if not (x.text[0] == "-" or 'select' in x.text.lower())]
+            timelines = [self.timestamp] if self.timestamp else timelines[0]
             for timeline in timelines:
                 self.grab_school_data(district, taluka, timeline)
                 self.logger.info("[LOOP-END] Completed Combination loop for District: {}\t|\tTaluka: {}\t|\tschool_type: {}\t|\ttimeline: {}".format(
