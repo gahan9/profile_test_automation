@@ -1,7 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-ghostdriver-2.1.0
+ghostdriver-2.1.*
 credential.json
 
 # C extensions
